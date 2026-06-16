@@ -16,11 +16,15 @@ from shared.models import TaskStatus, GPUInfo, TaskAssignment
 class Scheduler:
     def __init__(self, db_path: str = "poolgpu.db"):
         self.db_path = db_path
+        self._conn = sqlite3.connect(self.db_path)
+        self._conn.row_factory = sqlite3.Row
         self.init_db()
 
+    def _get_conn(self):
+        return self._conn
+
     def init_db(self):
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
+        c = self._get_conn().cursor()
         c.execute("""
             CREATE TABLE IF NOT EXISTS tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,53 +44,40 @@ class Scheduler:
                 error TEXT
             )
         """)
-        conn.commit()
-        conn.close()
+        self._get_conn().commit()
 
     def submit_task(self, name: str, command: str, gpu_count: int) -> int:
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
+        c = self._get_conn().cursor()
         c.execute(
             "INSERT INTO tasks (name, command, gpu_count) VALUES (?, ?, ?)",
             (name, command, gpu_count)
         )
         task_id = c.lastrowid
-        conn.commit()
-        conn.close()
+        self._get_conn().commit()
         return task_id
 
     def get_task(self, task_id: int) -> Optional[Dict]:
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
+        c = self._get_conn().cursor()
         c.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
-        columns = [desc[0] for desc in c.description]
         row = c.fetchone()
-        conn.close()
         if row:
-            return dict(zip(columns, row))
+            return dict(row)
         return None
 
     def get_pending_tasks(self) -> List[Dict]:
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
+        c = self._get_conn().cursor()
         c.execute("SELECT * FROM tasks WHERE status = 'pending' ORDER BY created_at")
-        columns = [desc[0] for desc in c.description]
-        tasks = [dict(zip(columns, row)) for row in c.fetchall()]
-        conn.close()
+        tasks = [dict(row) for row in c.fetchall()]
         return tasks
 
     def get_all_tasks(self) -> List[Dict]:
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
+        c = self._get_conn().cursor()
         c.execute("SELECT * FROM tasks ORDER BY created_at DESC")
-        columns = [desc[0] for desc in c.description]
-        tasks = [dict(zip(columns, row)) for row in c.fetchall()]
-        conn.close()
+        tasks = [dict(row) for row in c.fetchall()]
         return tasks
 
     def update_task_status(self, task_id: int, status: str, **kwargs):
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
+        c = self._get_conn().cursor()
         updates = ["status = ?"]
         values = [status]
         for key, value in kwargs.items():
@@ -94,8 +85,7 @@ class Scheduler:
             values.append(value)
         values.append(task_id)
         c.execute(f"UPDATE tasks SET {', '.join(updates)} WHERE id = ?", values)
-        conn.commit()
-        conn.close()
+        self._get_conn().commit()
 
     def get_all_gpu_status(self) -> List[Dict]:
         """查询所有 Worker 的 GPU 状态"""
