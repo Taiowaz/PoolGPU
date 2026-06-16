@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PoolGPU Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #333; }
+        .section { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .gpu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .gpu-card { background: #f8f9fa; border-radius: 6px; padding: 15px; border-left: 4px solid #4CAF50; }
+        .gpu-card.busy { border-left-color: #FF9800; }
+        .gpu-card.error { border-left-color: #f44336; }
+        .gpu-card h3 { margin: 0 0 10px 0; font-size: 14px; }
+        .gpu-status { display: flex; gap: 10px; }
+        .gpu-item { padding: 5px 10px; border-radius: 4px; background: #e8f5e9; }
+        .gpu-item.busy { background: #fff3e0; }
+        .gpu-item.error { background: #ffebee; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f5f5f5; }
+        .status-running { color: #FF9800; }
+        .status-completed { color: #4CAF50; }
+        .status-failed { color: #f44336; }
+        .status-pending { color: #9E9E9E; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PoolGPU Dashboard</h1>
+        
+        <div class="section">
+            <h2>GPU 状态</h2>
+            <div class="gpu-grid" id="gpu-status">
+                <!-- 动态加载 -->
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>任务队列</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>名称</th>
+                        <th>GPU</th>
+                        <th>状态</th>
+                        <th>进度</th>
+                    </tr>
+                </thead>
+                <tbody id="task-list">
+                    <!-- 动态加载 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        async function loadGpuStatus() {
+            const res = await fetch('/api/gpu');
+            const data = await res.json();
+            const container = document.getElementById('gpu-status');
+            container.innerHTML = data.map(server => `
+                <div class="gpu-card ${server.gpus.some(g => g.status === 'error') ? 'error' : server.gpus.some(g => g.status === 'busy') ? 'busy' : ''}">
+                    <h3>${server.server} (${server.model}×${server.gpus.length})</h3>
+                    <div class="gpu-status">
+                        ${server.gpus.map(gpu => `
+                            <span class="gpu-item ${gpu.status}">${gpu.status === 'idle' ? '🟢 空闲' : gpu.status === 'busy' ? '🟡 运行' : '🔴 故障'}</span>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function loadTasks() {
+            const res = await fetch('/api/tasks');
+            const data = await res.json();
+            const tbody = document.getElementById('task-list');
+            tbody.innerHTML = data.map(task => `
+                <tr>
+                    <td>${task.id}</td>
+                    <td>${task.name}</td>
+                    <td>${task.gpu}</td>
+                    <td class="status-${task.status}">${task.status}</td>
+                    <td>${task.progress}%</td>
+                </tr>
+            `).join('');
+        }
+        
+        loadGpuStatus();
+        loadTasks();
+        setInterval(loadGpuStatus, 5000);
+        setInterval(loadTasks, 5000);
+    </script>
+</body>
+</html>

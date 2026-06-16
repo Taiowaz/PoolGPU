@@ -1,0 +1,7 @@
+flask>=2.0
+flask-socketio>=5.0
+paramiko>=2.7
+psutil>=5.8
+click>=8.0
+pyyaml>=5.4
+nvidia-ml-py>=11.0
