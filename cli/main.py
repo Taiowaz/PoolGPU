@@ -115,7 +115,31 @@ def sync():
 @cli.command()
 def env_sync():
     """同步环境到所有服务器"""
-    click.echo("环境同步功能将在后续迭代中实现")
+    result = scheduler.env_sync_all_workers()
+
+    # 显示打包结果
+    if result["pack_status"] != "success":
+        click.echo(f"环境打包失败: {result.get('pack_error', 'unknown error')}")
+        return
+
+    click.echo(f"环境打包完成 (耗时: {result['pack_duration']}s)")
+
+    # 显示 Worker 同步结果
+    workers = result.get("workers", [])
+    if not workers:
+        click.echo("没有配置 Worker 服务器")
+        return
+
+    click.echo("环境同步结果:")
+    click.echo(f"{'服务器':<12} {'状态':<10} {'耗时':<8}")
+    click.echo("-" * 35)
+
+    for w in workers:
+        status_icon = "✅" if w["status"] == "success" else "❌"
+        click.echo(
+            f"{w['server']:<12} {status_icon} {w['status']:<8} "
+            f"{w.get('duration', '-')}s"
+        )
 
 
 if __name__ == "__main__":
