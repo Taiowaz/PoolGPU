@@ -8,7 +8,7 @@ from typing import Optional, List, Dict
 
 from shared.config import (
     load_config, get_server_config, get_all_servers,
-    get_worker_port, get_gpu_performance_level
+    get_worker_port, get_gpu_performance_level, get_code_dir
 )
 from shared.models import TaskStatus, GPUInfo, TaskAssignment
 
@@ -230,3 +230,48 @@ class Scheduler:
 
         self.update_task_status(task_id, TaskStatus.CANCELLED.value)
         return True
+
+    def sync_all_workers(self) -> list:
+        """同步代码到所有 Worker"""
+        import time
+        from shared.config import get_code_dir, get_worker_port
+
+        config = load_config()
+        code_dir = get_code_dir()
+        worker_port = get_worker_port()
+        master_host = config["master"]["host"]
+        source = f"{master_host}:{code_dir}"
+
+        results = []
+        for server in config.get("servers", []):
+            start_time = time.time()
+            try:
+                resp = requests.post(
+                    f"http://{server['host']}:{worker_port}/api/sync",
+                    json={"source": source},
+                    timeout=310  # rsync timeout + buffer
+                )
+                if resp.ok:
+                    data = resp.json()
+                    results.append({
+                        "server": server["name"],
+                        "status": data.get("status", "unknown"),
+                        "files_changed": data.get("files_changed", 0),
+                        "duration": data.get("duration", 0)
+                    })
+                else:
+                    results.append({
+                        "server": server["name"],
+                        "status": "failed",
+                        "error": resp.text,
+                        "duration": round(time.time() - start_time, 2)
+                    })
+            except Exception as e:
+                results.append({
+                    "server": server["name"],
+                    "status": "failed",
+                    "error": str(e),
+                    "duration": round(time.time() - start_time, 2)
+                })
+
+        return results
