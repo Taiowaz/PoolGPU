@@ -20,6 +20,7 @@ def task_progress(task_id):
     progress = data.get("progress", 0)
     stdout = data.get("stdout", "")
     stderr = data.get("stderr", "")
+    result_dir = data.get("result_dir")
 
     task = scheduler.get_task(task_id)
     if not task:
@@ -33,6 +34,18 @@ def task_progress(task_id):
             finished_at=__import__("datetime").datetime.now().isoformat(),
             result_path=stdout
         )
+        # 自动收集结果
+        if result_dir and task.get("server"):
+            collect_result = scheduler.collect_result(
+                task_id,
+                task["server"],
+                result_dir
+            )
+            if collect_result.get("status") == "success":
+                scheduler.update_task_status(
+                    task_id,
+                    result_path=collect_result.get("local_path", "")
+                )
     elif status == "failed":
         scheduler.update_task_status(
             task_id,
