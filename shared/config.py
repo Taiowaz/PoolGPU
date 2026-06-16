@@ -59,3 +59,15 @@ def get_sync_excludes() -> list:
         "*.pyo",
         ".pytest_cache/",
     ]
+
+
+def get_env_name() -> str:
+    """获取 conda 环境名"""
+    config = load_config()
+    return config.get("sync", {}).get("env_name", "myenv")
+
+
+def get_env_pack_path() -> str:
+    """获取环境打包文件路径"""
+    config = load_config()
+    return config.get("sync", {}).get("env_pack_path", "/tmp/myenv.tar.gz")
