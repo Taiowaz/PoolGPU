@@ -71,3 +71,9 @@ def get_env_pack_path() -> str:
     """获取环境打包文件路径"""
     config = load_config()
     return config.get("sync", {}).get("env_pack_path", "/tmp/myenv.tar.gz")
+
+
+def get_results_dir() -> str:
+    """获取结果存储目录"""
+    config = load_config()
+    return config.get("results", {}).get("dir", "/home/albin/poolgpu/results")
