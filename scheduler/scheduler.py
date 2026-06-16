@@ -355,3 +355,57 @@ class Scheduler:
             "pack_duration": pack_duration,
             "workers": results
         }
+
+    def collect_result(self, task_id: int, server_name: str, result_dir: str) -> dict:
+        """从 Worker 收集任务结果"""
+        import time
+        from shared.config import get_worker_port, get_results_dir
+
+        config = load_config()
+        worker_port = get_worker_port()
+        results_dir = get_results_dir()
+        master_host = config["master"]["host"]
+
+        # 找到服务器配置
+        server_config = None
+        for server in config.get("servers", []):
+            if server["name"] == server_name:
+                server_config = server
+                break
+
+        if server_config is None:
+            return {"status": "failed", "error": f"Server {server_name} not found"}
+
+        target_host = f"{master_host}:{results_dir}"
+
+        start_time = time.time()
+        try:
+            resp = requests.post(
+                f"http://{server_config['host']}:{worker_port}/api/collect-result",
+                json={
+                    "task_id": task_id,
+                    "result_dir": result_dir,
+                    "target_host": target_host
+                },
+                timeout=310
+            )
+            if resp.ok:
+                data = resp.json()
+                return {
+                    "status": data.get("status", "unknown"),
+                    "files_count": data.get("files_count", 0),
+                    "duration": data.get("duration", 0),
+                    "local_path": f"{results_dir}/task_{task_id}"
+                }
+            else:
+                return {
+                    "status": "failed",
+                    "error": resp.text,
+                    "duration": round(time.time() - start_time, 2)
+                }
+        except Exception as e:
+            return {
+                "status": "failed",
+                "error": str(e),
+                "duration": round(time.time() - start_time, 2)
+            }
