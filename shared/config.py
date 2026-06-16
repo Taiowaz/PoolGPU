@@ -41,3 +41,21 @@ def get_gpu_performance_level(gpu_model: str) -> int:
     """获取 GPU 性能等级，未知型号返回 0"""
     config = load_config()
     return config.get("gpu_models", {}).get(gpu_model, 0)
+
+
+def get_code_dir() -> str:
+    """获取主服务器代码目录"""
+    config = load_config()
+    return config.get("sync", {}).get("code_dir", "/home/albin/code")
+
+
+def get_sync_excludes() -> list:
+    """获取 rsync 排除规则"""
+    return [
+        "__pycache__/",
+        ".git/",
+        ".venv/",
+        "*.pyc",
+        "*.pyo",
+        ".pytest_cache/",
+    ]
