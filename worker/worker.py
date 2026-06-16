@@ -168,6 +168,68 @@ def sync_code():
         }), 500
 
 
+@app.route("/api/env-sync", methods=["POST"])
+def sync_env():
+    data = request.json
+    source = data.get("source")
+    env_name = data.get("env_name")
+    if not source or not env_name:
+        return jsonify({"error": "source and env_name are required"}), 400
+
+    import subprocess
+    import time
+    import os
+
+    pack_filename = f"{env_name}.tar.gz"
+    local_pack_path = f"/tmp/{pack_filename}"
+    target_dir = f"/home/albin/envs/{env_name}"
+
+    start_time = time.time()
+    try:
+        # 从 Master 下载打包文件
+        download_cmd = ["rsync", "-avz", f"{source}/{pack_filename}", f"{local_pack_path}"]
+        result = subprocess.run(download_cmd, capture_output=True, text=True, timeout=300)
+        if result.returncode != 0:
+            return jsonify({
+                "status": "failed",
+                "error": f"Download failed: {result.stderr}",
+                "duration": round(time.time() - start_time, 2)
+            }), 500
+
+        # 创建目标目录
+        os.makedirs(target_dir, exist_ok=True)
+
+        # 解压环境包
+        unpack_cmd = ["tar", "-xzf", local_pack_path, "-C", target_dir]
+        result = subprocess.run(unpack_cmd, capture_output=True, text=True, timeout=300)
+        if result.returncode != 0:
+            return jsonify({
+                "status": "failed",
+                "error": f"Unpack failed: {result.stderr}",
+                "duration": round(time.time() - start_time, 2)
+            }), 500
+
+        # 清理临时文件
+        os.remove(local_pack_path)
+
+        return jsonify({
+            "status": "success",
+            "duration": round(time.time() - start_time, 2)
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            "status": "failed",
+            "error": "Operation timeout (300s)",
+            "duration": 300
+        }), 500
+    except Exception as e:
+        return jsonify({
+            "status": "failed",
+            "error": str(e),
+            "duration": round(time.time() - start_time, 2)
+        }), 500
+
+
 def report_progress(task_id: int, process: subprocess.Popen, interval: int):
     """后台线程：定期向 Master 汇报任务进度"""
     config = load_config()
