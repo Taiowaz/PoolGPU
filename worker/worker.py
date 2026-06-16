@@ -230,6 +230,65 @@ def sync_env():
         }), 500
 
 
+@app.route("/api/collect-result", methods=["POST"])
+def collect_result():
+    data = request.json
+    task_id = data.get("task_id")
+    result_dir = data.get("result_dir")
+    target_host = data.get("target_host")
+
+    if not task_id or not result_dir or not target_host:
+        return jsonify({"error": "task_id, result_dir, and target_host are required"}), 400
+
+    import subprocess
+    import time
+    import os
+
+    if not os.path.exists(result_dir):
+        return jsonify({
+            "status": "failed",
+            "error": f"Result directory not found: {result_dir}",
+            "duration": 0
+        }), 404
+
+    target_path = f"{target_host}:/home/albin/poolgpu/results/task_{task_id}/"
+
+    start_time = time.time()
+    try:
+        cmd = ["rsync", "-avz", f"{result_dir}/", target_path]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        duration = round(time.time() - start_time, 2)
+
+        if result.returncode == 0:
+            files_count = len([
+                l for l in result.stdout.split("\n")
+                if l and not l.startswith("sending") and not l.startswith("sent")
+            ])
+            return jsonify({
+                "status": "success",
+                "files_count": files_count,
+                "duration": duration
+            })
+        else:
+            return jsonify({
+                "status": "failed",
+                "error": result.stderr,
+                "duration": duration
+            }), 500
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            "status": "failed",
+            "error": "rsync timeout (300s)",
+            "duration": 300
+        }), 500
+    except Exception as e:
+        return jsonify({
+            "status": "failed",
+            "error": str(e),
+            "duration": round(time.time() - start_time, 2)
+        }), 500
+
+
 def report_progress(task_id: int, process: subprocess.Popen, interval: int):
     """后台线程：定期向 Master 汇报任务进度"""
     config = load_config()
