@@ -1,58 +1,46 @@
-# PoolGPU 配置文件
-
+gpu_models:
+  3090Ti: 1
+  4090D: 2
+  '5090': 3
 master:
-  host: "127.0.0.1"
+  host: 127.0.0.1
   port: 8080
   web_port: 5000
-
-servers:
-  - name: "server1"
-    host: "192.168.1.101"
-    user: "albin"
-    gpus: 2
-    gpu_model: "4090D"
-
-  - name: "server2"
-    host: "192.168.1.102"
-    user: "albin"
-    gpus: 2
-    gpu_model: "4090D"
-
-  - name: "server3"
-    host: "192.168.1.103"
-    user: "albin"
-    gpus: 2
-    gpu_model: "3090Ti"
-
-  - name: "server4"
-    host: "192.168.1.104"
-    user: "albin"
-    gpus: 2
-    gpu_model: "3090Ti"
-
-  - name: "server5"
-    host: "192.168.1.105"
-    user: "albin"
-    gpus: 2
-    gpu_model: "5090"
-
-retry:
-  max_attempts: 3
-  delay_seconds: 5
-
-sync:
-  code_dir: "/home/albin/code"
-  env_name: "myenv"
-  env_pack_path: "/tmp/myenv.tar.gz"
-
 results:
-  dir: "/home/albin/poolgpu/results"
-
+  dir: /home/albin/poolgpu/results
+retry:
+  delay_seconds: 5
+  max_attempts: 3
+servers:
+- gpu_model: 4090D
+  gpus: 2
+  host: 192.168.1.101
+  name: server1
+  user: albin
+- gpu_model: 4090D
+  gpus: 2
+  host: 192.168.1.102
+  name: server2
+  user: albin
+- gpu_model: 3090Ti
+  gpus: 2
+  host: 192.168.1.103
+  name: server3
+  user: albin
+- gpu_model: 3090Ti
+  gpus: 2
+  host: 192.168.1.104
+  name: server4
+  user: albin
+- gpu_model: '5090'
+  gpus: 2
+  host: 192.168.1.105
+  name: server5
+  user: albin
+sync:
+  code_dir: /home/albin/code
+  env_name: myenv
+  env_pack_path: /tmp/myenv.tar.gz
 worker:
   port: 8090
   report_interval: 10
-
-gpu_models:
-  "5090": 3
-  "4090D": 2
-  "3090Ti": 1
