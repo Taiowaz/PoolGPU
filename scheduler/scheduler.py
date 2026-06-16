@@ -275,3 +275,83 @@ class Scheduler:
                 })
 
         return results
+
+    def env_sync_all_workers(self) -> dict:
+        """同步环境到所有 Worker"""
+        import time
+        import subprocess
+        from shared.config import get_env_name, get_env_pack_path, get_worker_port
+
+        config = load_config()
+        env_name = get_env_name()
+        pack_path = get_env_pack_path()
+        worker_port = get_worker_port()
+        master_host = config["master"]["host"]
+
+        # 第一步：在 Master 上打包环境
+        pack_start = time.time()
+        try:
+            pack_cmd = ["conda-pack", "-n", env_name, "-o", pack_path, "--force"]
+            result = subprocess.run(pack_cmd, capture_output=True, text=True, timeout=600)
+            if result.returncode != 0:
+                return {
+                    "pack_status": "failed",
+                    "pack_error": result.stderr,
+                    "pack_duration": round(time.time() - pack_start, 2),
+                    "workers": []
+                }
+        except subprocess.TimeoutExpired:
+            return {
+                "pack_status": "failed",
+                "pack_error": "conda-pack timeout (600s)",
+                "pack_duration": 600,
+                "workers": []
+            }
+        except Exception as e:
+            return {
+                "pack_status": "failed",
+                "pack_error": str(e),
+                "pack_duration": round(time.time() - pack_start, 2),
+                "workers": []
+            }
+
+        pack_duration = round(time.time() - pack_start, 2)
+
+        # 第二步：调用所有 Worker 同步
+        source = f"{master_host}:{pack_path}"
+        results = []
+        for server in config.get("servers", []):
+            start_time = time.time()
+            try:
+                resp = requests.post(
+                    f"http://{server['host']}:{worker_port}/api/env-sync",
+                    json={"source": source, "env_name": env_name},
+                    timeout=610
+                )
+                if resp.ok:
+                    data = resp.json()
+                    results.append({
+                        "server": server["name"],
+                        "status": data.get("status", "unknown"),
+                        "duration": data.get("duration", 0)
+                    })
+                else:
+                    results.append({
+                        "server": server["name"],
+                        "status": "failed",
+                        "error": resp.text,
+                        "duration": round(time.time() - start_time, 2)
+                    })
+            except Exception as e:
+                results.append({
+                    "server": server["name"],
+                    "status": "failed",
+                    "error": str(e),
+                    "duration": round(time.time() - start_time, 2)
+                })
+
+        return {
+            "pack_status": "success",
+            "pack_duration": pack_duration,
+            "workers": results
+        }
