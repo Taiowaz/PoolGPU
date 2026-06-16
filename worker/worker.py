@@ -107,6 +107,67 @@ def cancel_task(task_id):
     return jsonify({"status": "cancelled"})
 
 
+@app.route("/api/sync", methods=["POST"])
+def sync_code():
+    data = request.json
+    source = data.get("source")
+    if not source:
+        return jsonify({"error": "source is required"}), 400
+
+    from shared.config import get_code_dir, get_sync_excludes
+    import subprocess
+    import time
+
+    local_dir = get_code_dir()
+    excludes = get_sync_excludes()
+
+    # 构建 rsync 命令
+    cmd = ["rsync", "-avz", "--delete"]
+    for exclude in excludes:
+        cmd.extend(["--exclude", exclude])
+    cmd.extend([f"{source}/", f"{local_dir}/"])
+
+    start_time = time.time()
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        duration = round(time.time() - start_time, 2)
+
+        if result.returncode == 0:
+            # 统计变更文件数
+            files_changed = len([
+                l for l in result.stdout.split("\n")
+                if l and not l.startswith("sending") and not l.startswith("sent")
+            ])
+            return jsonify({
+                "status": "success",
+                "files_changed": files_changed,
+                "duration": duration
+            })
+        else:
+            return jsonify({
+                "status": "failed",
+                "error": result.stderr,
+                "duration": duration
+            }), 500
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            "status": "failed",
+            "error": "rsync timeout (300s)",
+            "duration": 300
+        }), 500
+    except Exception as e:
+        return jsonify({
+            "status": "failed",
+            "error": str(e),
+            "duration": round(time.time() - start_time, 2)
+        }), 500
+
+
 def report_progress(task_id: int, process: subprocess.Popen, interval: int):
     """后台线程：定期向 Master 汇报任务进度"""
     config = load_config()
