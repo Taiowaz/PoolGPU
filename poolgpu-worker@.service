@@ -1,0 +1,15 @@
+[Unit]
+Description=PoolGPU Worker Service
+After=network.target
+
+[Service]
+Type=simple
+User=albin
+WorkingDirectory=/home/albin/PoolGPU
+Environment=PATH=/home/albin/PoolGPU/.venv/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/albin/PoolGPU/.venv/bin/python main.py worker --server %i
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
