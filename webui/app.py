@@ -48,4 +48,4 @@ def get_notifications():
 
 
 def run_web(host="0.0.0.0", port=5000):
-    socketio.run(app, host=host, port=port, debug=True)
+    socketio.run(app, host=host, port=port, debug=True, allow_unsafe_werkzeug=True)

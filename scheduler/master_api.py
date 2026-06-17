@@ -88,4 +88,4 @@ def task_progress(task_id):
 
 def run_master_api(host: str = "0.0.0.0", port: int = 8080):
     print(f"Master API running on port {port}")
-    socketio.run(app, host=host, port=port, debug=False)
+    socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True)
