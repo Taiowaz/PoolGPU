@@ -2,11 +2,9 @@
 
 import sys
 import argparse
-import threading
 from shared.config import load_config
 from scheduler.scheduler import Scheduler
 from scheduler.master_api import init_master_api, run_master_api
-from webui.app import run_web
 from worker.worker import run_worker
 
 
@@ -14,22 +12,8 @@ def master_main():
     """poolgpu-master 命令入口"""
     config = load_config()
     init_master_api()
-    master_port = config["master"]["port"]
-    web_port = config["master"]["web_port"]
-    print(f"Master API: http://0.0.0.0:{master_port}")
-    print(f"Web UI: http://0.0.0.0:{web_port}")
-    print("按 Ctrl+C 停止服务")
-
-    # 在后台线程启动 Web UI
-    web_thread = threading.Thread(
-        target=run_web,
-        args=("0.0.0.0", web_port),
-        daemon=True
-    )
-    web_thread.start()
-
-    # 主线程运行 API
-    run_master_api("0.0.0.0", master_port)
+    port = config["master"]["port"]
+    run_master_api("0.0.0.0", port)
 
 
 def worker_main():
