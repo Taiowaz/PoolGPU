@@ -1,10 +1,12 @@
 """PoolGPU Master API - 供 Worker 回调汇报任务进度"""
 
 from flask import Flask, request, jsonify
+from flask_socketio import SocketIO
 from scheduler.scheduler import Scheduler
 from shared.models import TaskStatus
 
 app = Flask(__name__)
+socketio = SocketIO(app)
 scheduler: Scheduler = None
 
 
@@ -46,6 +48,15 @@ def task_progress(task_id):
                     task_id,
                     result_path=collect_result.get("local_path", "")
                 )
+        # 发送通知
+        message = f"任务 {task['name']} 已完成"
+        scheduler.add_notification(task_id, task["name"], "completed", message)
+        socketio.emit("notification", {
+            "task_id": task_id,
+            "task_name": task["name"],
+            "status": "completed",
+            "message": message
+        })
     elif status == "failed":
         scheduler.update_task_status(
             task_id,
@@ -54,6 +65,15 @@ def task_progress(task_id):
             finished_at=__import__("datetime").datetime.now().isoformat(),
             error=stderr
         )
+        # 发送通知
+        message = f"任务 {task['name']} 失败: {stderr[:100]}"
+        scheduler.add_notification(task_id, task["name"], "failed", message)
+        socketio.emit("notification", {
+            "task_id": task_id,
+            "task_name": task["name"],
+            "status": "failed",
+            "message": message
+        })
         # 自动重试
         scheduler.retry_task(task_id)
     else:
@@ -68,4 +88,4 @@ def task_progress(task_id):
 
 def run_master_api(host: str = "0.0.0.0", port: int = 8080):
     print(f"Master API running on port {port}")
-    app.run(host=host, port=port, debug=False)
+    socketio.run(app, host=host, port=port, debug=False)
