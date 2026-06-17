@@ -3,42 +3,22 @@ gpu_models:
   4090D: 2
   '5090': 3
 master:
-  host: 127.0.0.1
+  host: 10.61.16.33
   port: 8080
   web_port: 5000
 results:
-  dir: /home/albin/poolgpu/results
+  dir: /home/handb/poolgpu/results
 retry:
   delay_seconds: 5
   max_attempts: 3
 servers:
-- gpu_model: 4090D
-  gpus: 2
-  host: 192.168.1.101
-  name: server1
-  user: albin
-- gpu_model: 4090D
-  gpus: 2
-  host: 192.168.1.102
-  name: server2
-  user: albin
-- gpu_model: 3090Ti
-  gpus: 2
-  host: 192.168.1.103
-  name: server3
-  user: albin
-- gpu_model: 3090Ti
-  gpus: 2
-  host: 192.168.1.104
-  name: server4
-  user: albin
 - gpu_model: '5090'
   gpus: 2
-  host: 192.168.1.105
-  name: server5
-  user: albin
+  host: 10.62.193.36
+  name: server1
+  user: handb
 sync:
-  code_dir: /home/albin/code
+  code_dir: /home/handb/PoolGPU
   env_name: myenv
   env_pack_path: /tmp/myenv.tar.gz
 worker:
