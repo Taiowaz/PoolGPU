@@ -5,6 +5,7 @@ setup(
     version="0.1.0",
     description="GPU 资源池调度系统",
     packages=find_packages(),
+    py_modules=["main", "poolgpu_master", "poolgpu_worker"],
     python_requires=">=3.8",
     install_requires=[
         "flask>=2.0",
@@ -17,6 +18,8 @@ setup(
     entry_points={
         "console_scripts": [
             "poolgpu=cli.main:cli",
+            "poolgpu-master=poolgpu_master:main",
+            "poolgpu-worker=poolgpu_worker:main",
         ],
     },
 )
