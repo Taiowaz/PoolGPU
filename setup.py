@@ -14,6 +14,7 @@ setup(
         "psutil>=5.8",
         "click>=8.0",
         "pyyaml>=5.4",
+        "requests>=2.28",
     ],
     entry_points={
         "console_scripts": [
