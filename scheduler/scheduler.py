@@ -46,6 +46,18 @@ class Scheduler:
         """)
         self._get_conn().commit()
 
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id INTEGER,
+                task_name TEXT,
+                status TEXT,
+                message TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        self._get_conn().commit()
+
     def submit_task(self, name: str, command: str, gpu_count: int) -> int:
         c = self._get_conn().cursor()
         c.execute(
@@ -409,3 +421,27 @@ class Scheduler:
                 "error": str(e),
                 "duration": round(time.time() - start_time, 2)
             }
+
+    def add_notification(self, task_id: int, task_name: str, status: str, message: str):
+        """添加通知"""
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute(
+            "INSERT INTO notifications (task_id, task_name, status, message) VALUES (?, ?, ?, ?)",
+            (task_id, task_name, status, message)
+        )
+        conn.commit()
+        conn.close()
+
+    def get_notifications(self, limit: int = 50) -> list:
+        """获取通知记录"""
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute(
+            "SELECT * FROM notifications ORDER BY created_at DESC LIMIT ?",
+            (limit,)
+        )
+        columns = [desc[0] for desc in c.description]
+        notifications = [dict(zip(columns, row)) for row in c.fetchall()]
+        conn.close()
+        return notifications
