@@ -13,60 +13,52 @@ echo "角色: $ROLE"
 echo "服务器: $SERVER_NAME"
 echo ""
 
-# 检查 Python 环境
+# 检查 Python
 if ! command -v python3 &> /dev/null; then
     echo "错误: 未找到 python3"
-    echo "请先安装: sudo apt install python3 python3-pip"
     exit 1
 fi
 
-PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2)
-echo "Python 版本: $PYTHON_VERSION"
+echo "Python: $(python3 --version)"
 
-# 检查 python3-venv
-if ! python3 -m venv --help &> /dev/null 2>&1; then
-    echo "python3-venv 未安装，正在安装（需要 sudo 权限）..."
-    sudo apt update -qq
-    sudo apt install -y "python3${PYTHON_VERSION}-venv"
-fi
-
-# 创建虚拟环境
+# 尝试创建 venv，如果失败则安装依赖
 if [ ! -d "$VENV_DIR" ]; then
     echo "创建虚拟环境..."
-    python3 -m venv "$VENV_DIR"
+    if ! python3 -m venv "$VENV_DIR" 2>/dev/null; then
+        echo "venv 创建失败，尝试安装 python3-venv..."
+        sudo apt update -qq 2>/dev/null
+        sudo apt install -y python3-venv python3-pip
+        python3 -m venv "$VENV_DIR"
+    fi
 fi
 
-# 验证虚拟环境
-if [ ! -f "$VENV_DIR/bin/activate" ]; then
+# 验证 venv
+if [ ! -f "$VENV_DIR/bin/python" ]; then
     echo "错误: 虚拟环境创建失败"
+    echo "尝试手动运行: python3 -m venv .venv"
     exit 1
 fi
 
-# 激活虚拟环境
-source "$VENV_DIR/bin/activate"
+echo "虚拟环境: OK"
 
-# 安装依赖
-echo "安装依赖..."
-pip install --upgrade pip -q 2>/dev/null
-pip install -e . -q 2>/dev/null
+# 安装
+echo "安装 PoolGPU..."
+"$VENV_DIR/bin/pip" install --upgrade pip -q 2>/dev/null || true
+"$VENV_DIR/bin/pip" install -e . -q 2>/dev/null
 
-# 验证安装
-if command -v poolgpu &> /dev/null; then
-    echo "poolgpu 命令安装成功"
+# 验证
+if "$VENV_DIR/bin/poolgpu" --help &> /dev/null; then
+    echo "poolgpu 命令: OK"
 else
-    echo "警告: poolgpu 命令未找到，尝试重新安装..."
-    pip install -e . -q 2>/dev/null
+    echo "警告: poolgpu 命令未安装成功"
 fi
 
 echo ""
 echo "=== 部署完成 ==="
 echo ""
-echo "使用方法:"
-echo "  1. 激活虚拟环境: source $VENV_DIR/bin/activate"
-echo "  2. 启动服务:"
+echo "启动方式:"
 if [ "$ROLE" = "worker" ]; then
-    echo "     poolgpu-worker $SERVER_NAME"
+    echo "  source $VENV_DIR/bin/activate && poolgpu-worker $SERVER_NAME"
 else
-    echo "     poolgpu-master"
+    echo "  source $VENV_DIR/bin/activate && poolgpu-master"
 fi
-echo "  3. 查看帮助: poolgpu --help"
