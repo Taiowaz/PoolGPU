@@ -41,5 +41,11 @@ def get_gpu():
     return jsonify(list(servers.values()))
 
 
+@app.route("/api/notifications")
+def get_notifications():
+    notifications = scheduler.get_notifications()
+    return jsonify(notifications)
+
+
 def run_web(host="0.0.0.0", port=5000):
     socketio.run(app, host=host, port=port, debug=True)
