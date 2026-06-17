@@ -83,32 +83,45 @@ poolgpu gpu
   server1 (5090×2): 🟢 空闲 🟢 空闲
 ```
 
-### 测试 2：提交测试任务
+### 测试 2：简单任务测试
 
 ```bash
-poolgpu submit --gpu 1 --name "test_task" -- echo hello
-```
-
-预期输出：
-```
-任务已提交: ID=1, 名称=test_task, GPU=1
-任务已调度: 服务器=server1, GPU=[0]
-```
-
-### 测试 3：查看任务状态
-
-```bash
+poolgpu submit --gpu 1 --name "simple_test" -- echo hello
 poolgpu status
 ```
 
 预期输出：
 ```
-ID    名称          GPU   状态          进度       服务器
-------------------------------------------------------------
-1     test_task     1     completed    100        server1
+任务已提交: ID=1, 名称=simple_test, GPU=1
+任务已调度: 服务器=server1, GPU=[0]
 ```
 
-### 测试 4：Web UI 查看
+### 测试 3：长时间任务测试
+
+```bash
+poolgpu submit --gpu 1 --name "long_test" -- bash test_long_task.sh
+watch -n 1 poolgpu status
+```
+
+任务运行 30 秒，可以观察状态变化。
+
+### 测试 4：GPU 状态验证
+
+```bash
+poolgpu submit --gpu 1 --name "gpu_test" -- nvidia-smi
+poolgpu status
+```
+
+这会分配 1 张 GPU 并运行 `nvidia-smi`，验证 GPU 分配是否正常。
+
+### 测试 5：多 GPU 任务
+
+```bash
+poolgpu submit --gpu 2 --name "multi_gpu_test" -- bash -c "echo GPU: \$CUDA_VISIBLE_DEVICES && nvidia-smi"
+poolgpu status
+```
+
+### 测试 6：Web UI 查看
 
 浏览器访问：`http://<Master IP>:8080`
 
@@ -116,8 +129,9 @@ ID    名称          GPU   状态          进度       服务器
 - GPU 状态显示正确
 - 任务列表显示任务
 - 通知记录显示任务完成
+- 实时更新正常
 
-### 测试 5：代码同步
+### 测试 7：代码同步
 
 ```bash
 poolgpu sync
@@ -131,13 +145,19 @@ poolgpu sync
 server1       ✅ success      5    1.2s
 ```
 
-### 测试 6：环境同步
+### 测试 8：任务提交时自动同步
+
+```bash
+poolgpu submit --sync --gpu 1 --name "sync_test" -- echo hello
+```
+
+### 测试 9：环境同步
 
 ```bash
 poolgpu env-sync
 ```
 
-### 测试 7：后台运行验证
+### 测试 10：后台运行验证
 
 ```bash
 # 查看进程
@@ -207,6 +227,18 @@ lsof -i :8090
 kill $(lsof -t -i :8090)
 ```
 
+### 问题 6：GPU 没有被使用
+
+**说明：** `--gpu` 参数只是分配 GPU，任务本身需要是 CUDA 程序才能使用 GPU。
+
+```bash
+# 测试 GPU 分配（不实际使用 GPU）
+poolgpu submit --gpu 1 --name "gpu_test" -- nvidia-smi
+
+# 实际使用 GPU（需要安装 PyTorch）
+poolgpu submit --gpu 1 --name "torch_test" -- python3 -c "import torch; print(torch.cuda.get_device_name(0))"
+```
+
 ## 停止服务
 
 ```bash
@@ -225,4 +257,7 @@ tail -f poolgpu.log
 
 # 查看最近 50 行
 tail -50 poolgpu.log
+
+# 查看错误日志
+grep -i error poolgpu.log
 ```
