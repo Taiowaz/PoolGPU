@@ -1,10 +1,12 @@
 """PoolGPU Web UI - Web 界面"""
 
+from pathlib import Path
 from flask import Flask, render_template, jsonify
 from flask_socketio import SocketIO
 from scheduler.scheduler import Scheduler
 
-app = Flask(__name__)
+template_dir = Path(__file__).parent / "templates"
+app = Flask(__name__, template_folder=str(template_dir))
 socketio = SocketIO(app)
 scheduler = Scheduler()
 
@@ -48,4 +50,4 @@ def get_notifications():
 
 
 def run_web(host="0.0.0.0", port=5000):
-    socketio.run(app, host=host, port=port, debug=True, allow_unsafe_werkzeug=True)
+    socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True)
