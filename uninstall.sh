@@ -41,8 +41,11 @@ if [ -d "$INSTALL_DIR" ]; then
     info "已删除 $INSTALL_DIR"
 fi
 
+# 4. 清理 PATH
+if grep -q '$HOME/.local/bin' ~/.bashrc 2>/dev/null; then
+    sed -i '/$HOME\/.local\/bin/d' ~/.bashrc
+    info "已从 ~/.bashrc 移除 PATH 配置"
+fi
+
 echo ""
 info "卸载完成！"
-echo ""
-echo "如需从 PATH 中移除，请编辑 ~/.bashrc 删除："
-echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
