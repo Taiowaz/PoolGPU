@@ -71,13 +71,13 @@ EOF
     info "命令入口创建完成"
 }
 
-# 5. 检查 PATH
-check_path() {
+# 5. 配置 PATH
+setup_path() {
     if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
-        warn "请将以下内容添加到 ~/.bashrc:"
-        echo "export PATH=\"\$HOME/.local/bin:\$PATH\""
-        echo ""
-        echo "然后运行: source ~/.bashrc"
+        if ! grep -q '\.local/bin' ~/.bashrc 2>/dev/null; then
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+            info "已添加 PATH 到 ~/.bashrc"
+        fi
     else
         info "PATH 配置正确"
     fi
@@ -90,11 +90,8 @@ check_python
 setup_dirs
 install_poolgpu
 create_wrapper
-check_path
+setup_path
 
 echo ""
 info "安装完成！"
-echo ""
-echo "下一步："
-echo "  1. 确保 ~/.local/bin 在 PATH 中"
-echo "  2. 运行 'poolgpu init' 开始配置"
+echo "运行 'source ~/.bashrc && poolgpu init' 开始配置"
