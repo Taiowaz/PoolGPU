@@ -193,8 +193,12 @@ def init():
                 click.echo(f"  发现 {len(workers)} 台 Worker:")
                 for w in workers:
                     gpu_info = w.get("gpu", [{}])
-                    model = gpu_info[0].get("gpu_model", "unknown") if gpu_info else "unknown"
-                    count = len(gpu_info) if gpu_info else 0
+                    if gpu_info and isinstance(gpu_info, list) and len(gpu_info) > 0:
+                        model = gpu_info[0].get("name", "unknown")
+                        count = len(gpu_info)
+                    else:
+                        model = "unknown"
+                        count = 0
                     name = click.prompt(
                         f"  - {w['host']} ({model} × {count}) 的名称",
                         default=f"server{len(servers)+1}"
@@ -250,8 +254,12 @@ def discover(subnet):
     click.echo(f"发现 {len(workers)} 台 Worker:")
     for w in workers:
         gpu_info = w.get("gpu", [{}])
-        model = gpu_info[0].get("gpu_model", "unknown") if gpu_info else "unknown"
-        count = len(gpu_info) if gpu_info else 0
+        if gpu_info and isinstance(gpu_info, list) and len(gpu_info) > 0:
+            model = gpu_info[0].get("name", "unknown")
+            count = len(gpu_info)
+        else:
+            model = "unknown"
+            count = 0
         click.echo(f"  - {w['host']} ({model} × {count})")
 
     if click.confirm("将发现的 Worker 添加到配置"):
@@ -262,8 +270,12 @@ def discover(subnet):
 
         for w in new_workers:
             gpu_info = w.get("gpu", [{}])
-            model = gpu_info[0].get("gpu_model", "unknown") if gpu_info else "unknown"
-            count = len(gpu_info) if gpu_info else 0
+            if gpu_info and isinstance(gpu_info, list) and len(gpu_info) > 0:
+                model = gpu_info[0].get("name", "unknown")
+                count = len(gpu_info)
+            else:
+                model = "unknown"
+                count = 0
             name = click.prompt(
                 f"  - {w['host']} 的名称",
                 default=f"server{len(config.get('servers', []))+1}"
