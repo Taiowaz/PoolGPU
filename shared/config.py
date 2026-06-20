@@ -6,10 +6,51 @@ from typing import Dict, Optional
 
 CONFIG_PATH = Path(__file__).parent.parent / "config.yaml"
 
-def load_config() -> Dict:
-    """加载配置"""
-    with open(CONFIG_PATH) as f:
-        return yaml.safe_load(f)
+USER_CONFIG_DIR = Path.home() / ".local/share/poolgpu/config"
+USER_CONFIG_FILE = USER_CONFIG_DIR / "config.yaml"
+PROJECT_CONFIG_FILE = Path(__file__).parent.parent / "config.yaml"
+
+DEFAULT_CONFIG = {
+    "master": {"host": "127.0.0.1", "port": 8080, "web_port": 5000},
+    "worker": {"port": 8090, "report_interval": 10},
+    "gpu_models": {"3090Ti": 1, "4090D": 2, "5090": 3},
+    "results": {"dir": "/tmp/poolgpu/results"},
+    "sync": {"code_dir": ".", "env_name": "myenv", "env_pack_path": "/tmp/myenv.tar.gz"},
+    "servers": [],
+    "retry": {"delay_seconds": 5, "max_attempts": 3},
+}
+
+def get_config_path(level: str = "user") -> Path:
+    if level == "user":
+        return USER_CONFIG_FILE
+    elif level == "project":
+        return PROJECT_CONFIG_FILE
+    else:
+        raise ValueError(f"Unknown config level: {level}")
+
+def _deep_merge(base: dict, override: dict) -> dict:
+    result = base.copy()
+    for key, value in override.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+def load_config(merge_project: bool = True) -> Dict:
+    config = DEFAULT_CONFIG.copy()
+
+    if USER_CONFIG_FILE.exists():
+        with open(USER_CONFIG_FILE) as f:
+            user_config = yaml.safe_load(f) or {}
+        config = _deep_merge(config, user_config)
+
+    if merge_project and PROJECT_CONFIG_FILE.exists():
+        with open(PROJECT_CONFIG_FILE) as f:
+            project_config = yaml.safe_load(f) or {}
+        config = _deep_merge(config, project_config)
+
+    return config
 
 def get_server_config(server_name: str) -> Optional[Dict]:
     """获取服务器配置"""
