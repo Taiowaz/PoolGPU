@@ -17,23 +17,31 @@ echo "=== PoolGPU 卸载 ==="
 echo ""
 
 # 1. 停止运行中的服务
+info "正在停止服务..."
+
+# 通过 PID 文件停止
 if [ -d "$INSTALL_DIR/pids" ]; then
     for pidfile in "$INSTALL_DIR/pids"/*.pid; do
         if [ -f "$pidfile" ]; then
             pid=$(cat "$pidfile")
-            if kill -0 "$pid" 2>/dev/null; then
-                kill "$pid" 2>/dev/null && info "已停止进程 $pid" || true
-            fi
+            kill "$pid" 2>/dev/null && info "已停止进程 $pid" || true
             rm -f "$pidfile"
         fi
     done
 fi
 
+# 强制杀掉所有 poolgpu 进程
+pkill -f poolgpu-master 2>/dev/null && info "已停止 poolgpu-master" || true
+pkill -f poolgpu-worker 2>/dev/null && info "已停止 poolgpu-worker" || true
+pkill -f "poolgpu.*start" 2>/dev/null || true
+
 # 2. 删除命令入口
-if [ -f "$BIN_DIR/poolgpu" ]; then
-    rm -f "$BIN_DIR/poolgpu"
-    info "已删除命令入口"
-fi
+for cmd in poolgpu poolgpu-master poolgpu-worker; do
+    if [ -f "$BIN_DIR/$cmd" ]; then
+        rm -f "$BIN_DIR/$cmd"
+    fi
+done
+info "已删除命令入口"
 
 # 3. 删除安装目录
 if [ -d "$INSTALL_DIR" ]; then
