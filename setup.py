@@ -6,6 +6,10 @@ setup(
     description="GPU 资源池调度系统",
     packages=find_packages(),
     py_modules=["main", "poolgpu_master", "poolgpu_worker"],
+    package_data={
+        "webui": ["templates/*.html"],
+    },
+    include_package_data=True,
     python_requires=">=3.8",
     install_requires=[
         "flask>=2.0",
