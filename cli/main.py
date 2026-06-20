@@ -1,5 +1,6 @@
 """PoolGPU CLI - 命令行工具"""
 
+import copy
 import os
 import signal
 import subprocess
@@ -209,7 +210,7 @@ def init():
             else:
                 click.echo("  未发现 Worker，可以稍后运行 'poolgpu discover' 添加")
 
-    config = DEFAULT_CONFIG.copy()
+    config = copy.deepcopy(DEFAULT_CONFIG)
     config["master"]["host"] = master_host
 
     if role == "worker":
@@ -309,12 +310,14 @@ def master(daemon):
 
     if daemon:
         pid_file = PID_DIR / "master.pid"
+        log_handle = open(PID_DIR / "master.log", "w")
         proc = subprocess.Popen(
             cmd,
-            stdout=open(PID_DIR / "master.log", "w"),
+            stdout=log_handle,
             stderr=subprocess.STDOUT,
             start_new_session=True
         )
+        log_handle.close()
         pid_file.write_text(str(proc.pid))
         click.echo(f"  - PID: {proc.pid}")
         click.echo(f"  - 日志: {PID_DIR / 'master.log'}")
@@ -347,12 +350,14 @@ def worker(name, daemon):
 
     if daemon:
         pid_file = PID_DIR / f"worker-{name}.pid"
+        log_handle = open(PID_DIR / f"worker-{name}.log", "w")
         proc = subprocess.Popen(
             cmd,
-            stdout=open(PID_DIR / f"worker-{name}.log", "w"),
+            stdout=log_handle,
             stderr=subprocess.STDOUT,
             start_new_session=True
         )
+        log_handle.close()
         pid_file.write_text(str(proc.pid))
         click.echo(f"  - PID: {proc.pid}")
         click.echo(f"  - 日志: {PID_DIR / f'worker-{name}.log'}")
