@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 
 import shared.config
-from shared.config import load_config, USER_CONFIG_DIR, _deep_merge, DEFAULT_CONFIG
+from shared.config import load_config
 
 
 def test_full_config_lifecycle():
