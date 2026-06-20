@@ -42,9 +42,11 @@ if [ -d "$INSTALL_DIR" ]; then
 fi
 
 # 4. 清理 PATH
-if grep -q '$HOME/.local/bin' ~/.bashrc 2>/dev/null; then
-    sed -i '/$HOME\/.local\/bin/d' ~/.bashrc
+if grep -q '\.local/bin' ~/.bashrc 2>/dev/null; then
+    sed -i '/\.local\/bin/d' ~/.bashrc
     info "已从 ~/.bashrc 移除 PATH 配置"
+else
+    info "PATH 未配置，无需清理"
 fi
 
 echo ""
