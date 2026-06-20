@@ -1,6 +1,6 @@
 #!/bin/bash
 # PoolGPU 一键安装脚本
-# 用法: curl -fsSL https://raw.githubusercontent.com/Taiowaz/PoolGPU/main/install.sh | bash
+# 用法: curl -fsSL https://raw.githubusercontent.com/Taiowaz/PoolGPU/dev/install.sh | bash
 
 set -e
 
