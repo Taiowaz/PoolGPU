@@ -44,6 +44,11 @@ setup_dirs() {
 
 # 3. 创建 venv 并安装
 install_poolgpu() {
+    # 如果 venv 已存在但有问题，重建
+    if [ -d "$VENV_DIR" ] && ! "$VENV_DIR/bin/pip" --version &>/dev/null; then
+        rm -rf "$VENV_DIR"
+    fi
+    
     if [ ! -d "$VENV_DIR" ]; then
         python3 -m venv "$VENV_DIR"
         info "虚拟环境创建完成"
@@ -51,11 +56,15 @@ install_poolgpu() {
     
     "$VENV_DIR/bin/pip" install --upgrade pip -q 2>/dev/null
     
-    # 从当前目录或 git 安装
-    if [ -f "setup.py" ]; then
-        "$VENV_DIR/bin/pip" install -e . -q
-    else
-        "$VENV_DIR/bin/pip" install git+https://github.com/Taiowaz/PoolGPU.git -q
+    # 安装依赖
+    "$VENV_DIR/bin/pip" install requests flask flask-socketio paramiko psutil click pyyaml -q
+    
+    # 从 git 安装 poolgpu
+    "$VENV_DIR/bin/pip" install git+https://github.com/Taiowaz/PoolGPU.git@dev -q
+    
+    # 验证安装
+    if ! "$VENV_DIR/bin/poolgpu" --help &>/dev/null; then
+        error "安装失败，请检查网络连接"
     fi
     
     info "PoolGPU 安装完成"
