@@ -4,8 +4,6 @@ import yaml
 from pathlib import Path
 from typing import Dict, Optional
 
-CONFIG_PATH = Path(__file__).parent.parent / "config.yaml"
-
 USER_CONFIG_DIR = Path.home() / ".local/share/poolgpu/config"
 USER_CONFIG_FILE = USER_CONFIG_DIR / "config.yaml"
 PROJECT_CONFIG_FILE = Path(__file__).parent.parent / "config.yaml"
