@@ -1,26 +1,47 @@
-gpu_models:
-  3090Ti: 1
-  4090D: 2
-  '5090': 3
+# PoolGPU 配置文件
+# 直接修改此文件配置集群
+
 master:
-  host: 10.61.16.33
-  port: 8080
-  web_port: 5000
+  host: 10.61.16.33    # Master IP
+  port: 8080           # API 端口
+  web_port: 5000       # Web UI 端口
+
+# Worker 列表
+servers:
+  - name: server1
+    host: 10.62.193.36
+    user: poolgpu-test
+    gpus: 2
+    gpu_model: "5090"
+  # 添加更多 Worker:
+  # - name: server2
+  #   host: 10.62.193.37
+  #   user: poolgpu-test
+  #   gpus: 2
+  #   gpu_model: "5090"
+
+# Worker 配置（Worker 机器上使用）
+worker:
+  port: 8090
+  report_interval: 10
+
+# 结果保存目录
 results:
   dir: /home/handb/poolgpu/results
-retry:
-  delay_seconds: 5
-  max_attempts: 3
-servers:
-- gpu_model: '5090'
-  gpus: 2
-  host: 10.62.193.36
-  name: server1
-  user: handb
+
+# 代码同步配置
 sync:
   code_dir: /home/handb/PoolGPU
   env_name: myenv
   env_pack_path: /tmp/myenv.tar.gz
-worker:
-  port: 8090
-  report_interval: 10
+
+# GPU 性能等级（用于调度优先级）
+gpu_models:
+  "3090Ti": 1
+  "4090D": 2
+  "5090": 3
+
+# 重试配置
+retry:
+  delay_seconds: 5
+  max_attempts: 3

@@ -1,18 +1,16 @@
 """PoolGPU CLI - 命令行工具"""
 
-import copy
 import os
 import signal
 import subprocess
 from pathlib import Path
 
 import click
-import json
 from scheduler.scheduler import Scheduler
-from shared.config import load_config, get_config_path, USER_CONFIG_DIR, DEFAULT_CONFIG
-from shared.discovery import get_local_ip
+from shared.config import load_config
 
 scheduler = Scheduler()
+PID_DIR = Path.home() / ".local/share/poolgpu/pids"
 
 
 @click.group()
@@ -150,70 +148,6 @@ def env_sync():
 
 
 PID_DIR = Path.home() / ".local/share/poolgpu/pids"
-
-
-@cli.command()
-def init():
-    """配置向导"""
-    import yaml
-
-    click.echo("PoolGPU 配置向导")
-    click.echo("")
-
-    local_ip = get_local_ip()
-    click.echo(f"检测到本机 IP: {local_ip}")
-
-    role = click.prompt("角色", type=click.Choice(["master", "worker"]), default="master")
-
-    config = copy.deepcopy(DEFAULT_CONFIG)
-
-    if role == "master":
-        config["master"]["host"] = click.prompt("Master IP", default=local_ip)
-        config["master"]["port"] = int(click.prompt("Master API 端口", default=8080))
-        config["master"]["web_port"] = int(click.prompt("Web UI 端口", default=5000))
-
-        click.echo("")
-        click.echo("配置 Worker 列表（输入空 IP 结束）:")
-        servers = []
-        while True:
-            worker_ip = click.prompt(f"Worker {len(servers)+1} IP", default="" if servers else "")
-            if not worker_ip:
-                break
-            worker_name = click.prompt("  名称", default=f"server{len(servers)+1}")
-            worker_user = click.prompt("  用户名", default=os.getenv("USER"))
-            servers.append({
-                "name": worker_name,
-                "host": worker_ip,
-                "user": worker_user,
-                "gpus": int(click.prompt("  GPU 数量", default=2)),
-                "gpu_model": click.prompt("  GPU 型号", default="5090")
-            })
-            click.echo("")
-
-        config["servers"] = servers
-
-    else:
-        config["master"]["host"] = click.prompt("Master IP")
-        config["worker"]["name"] = click.prompt("Worker 名称", default="worker1")
-
-    config["results"]["dir"] = click.prompt("结果保存目录", default=config["results"]["dir"])
-
-    USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    config_file = get_config_path("user")
-
-    with open(config_file, "w") as f:
-        yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
-
-    click.echo("")
-    click.echo(f"配置已保存到 {config_file}")
-    click.echo("")
-    if role == "master":
-        click.echo("启动: poolgpu start master --daemon")
-    else:
-        click.echo(f"启动: poolgpu start worker {config['worker']['name']} --daemon")
-
-    click.echo("")
-    click.echo(f"✅ 配置已保存到 {config_file}")
 
 
 @cli.group()
