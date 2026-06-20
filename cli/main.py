@@ -1,9 +1,16 @@
 """PoolGPU CLI - 命令行工具"""
 
+import os
+import signal
+import subprocess
+import ipaddress
+from pathlib import Path
+
 import click
 import json
 from scheduler.scheduler import Scheduler
-from shared.config import load_config
+from shared.config import load_config, get_config_path, USER_CONFIG_DIR, DEFAULT_CONFIG
+from shared.discovery import discover_workers, get_local_subnet
 
 scheduler = Scheduler()
 
@@ -140,6 +147,247 @@ def env_sync():
             f"{w['server']:<12} {status_icon} {w['status']:<8} "
             f"{w.get('duration', '-')}s"
         )
+
+
+PID_DIR = Path.home() / ".local/share/poolgpu/pids"
+
+
+@cli.command()
+def init():
+    """智能配置向导"""
+    import yaml
+
+    click.echo("🔍 检测本机信息...")
+
+    subnet = get_local_subnet()
+    local_ip = str(list(ipaddress.ip_network(subnet).hosts())[0]) if subnet else "127.0.0.1"
+    click.echo(f"  - IP: {local_ip}")
+
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=name,count", "--format=csv,noheader"],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            gpu_info = result.stdout.strip().split("\n")[0]
+            click.echo(f"  - GPU: {gpu_info}")
+        else:
+            click.echo("  - GPU: 未检测到")
+    except FileNotFoundError:
+        click.echo("  - GPU: nvidia-smi 不可用")
+
+    click.echo("")
+
+    role = click.prompt("你的角色是", type=click.Choice(["master", "worker"]), default="master")
+    master_host = click.prompt("Master IP", default=local_ip)
+
+    servers = []
+    if role == "master":
+        auto_discover = click.confirm("是否自动扫描局域网发现 Worker", default=True)
+
+        if auto_discover:
+            click.echo("🔍 扫描中...")
+            workers = discover_workers(subnet)
+
+            if workers:
+                click.echo(f"  发现 {len(workers)} 台 Worker:")
+                for w in workers:
+                    gpu_info = w.get("gpu", [{}])
+                    model = gpu_info[0].get("gpu_model", "unknown") if gpu_info else "unknown"
+                    count = len(gpu_info) if gpu_info else 0
+                    name = click.prompt(
+                        f"  - {w['host']} ({model} × {count}) 的名称",
+                        default=f"server{len(servers)+1}"
+                    )
+                    servers.append({
+                        "name": name,
+                        "host": w["host"],
+                        "user": click.prompt(f"  - {name} 的用户名", default=os.getenv("USER")),
+                        "gpus": count,
+                        "gpu_model": model
+                    })
+            else:
+                click.echo("  未发现 Worker，可以稍后运行 'poolgpu discover' 添加")
+
+    config = DEFAULT_CONFIG.copy()
+    config["master"]["host"] = master_host
+
+    if role == "worker":
+        worker_name = click.prompt("Worker 名称", default="worker1")
+        config["worker"]["name"] = worker_name
+
+    if servers:
+        config["servers"] = servers
+
+    results_dir = click.prompt("任务结果保存目录", default=config["results"]["dir"])
+    config["results"]["dir"] = results_dir
+
+    USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    config_file = get_config_path("user")
+
+    with open(config_file, "w") as f:
+        yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
+
+    click.echo("")
+    click.echo(f"✅ 配置已保存到 {config_file}")
+
+
+@cli.command()
+@click.option("--update", is_flag=True, help="更新现有配置")
+@click.option("--subnet", help="指定扫描网段 (如 192.168.1.0/24)")
+def discover(update, subnet):
+    """自动发现 Worker"""
+    if subnet is None:
+        subnet = get_local_subnet()
+
+    click.echo(f"🔍 扫描 {subnet}...")
+
+    workers = discover_workers(subnet)
+
+    if not workers:
+        click.echo("未发现 Worker")
+        return
+
+    click.echo(f"发现 {len(workers)} 台 Worker:")
+    for w in workers:
+        gpu_info = w.get("gpu", [{}])
+        model = gpu_info[0].get("gpu_model", "unknown") if gpu_info else "unknown"
+        count = len(gpu_info) if gpu_info else 0
+        click.echo(f"  - {w['host']} ({model} × {count})")
+
+    if click.confirm("将发现的 Worker 添加到配置"):
+        config = load_config(merge_project=False)
+
+        existing_hosts = {s["host"] for s in config.get("servers", [])}
+        new_workers = [w for w in workers if w["host"] not in existing_hosts]
+
+        for w in new_workers:
+            gpu_info = w.get("gpu", [{}])
+            model = gpu_info[0].get("gpu_model", "unknown") if gpu_info else "unknown"
+            count = len(gpu_info) if gpu_info else 0
+            name = click.prompt(
+                f"  - {w['host']} 的名称",
+                default=f"server{len(config.get('servers', []))+1}"
+            )
+
+            config.setdefault("servers", []).append({
+                "name": name,
+                "host": w["host"],
+                "user": click.prompt(f"  - {name} 的用户名", default=os.getenv("USER")),
+                "gpus": count,
+                "gpu_model": model
+            })
+
+        import yaml
+        config_file = get_config_path("user")
+        with open(config_file, "w") as f:
+            yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
+
+        click.echo(f"✅ 已添加 {len(new_workers)} 台 Worker 到配置")
+
+
+@cli.group()
+def start():
+    """启动服务"""
+    PID_DIR.mkdir(parents=True, exist_ok=True)
+
+
+@start.command()
+@click.option("--daemon", is_flag=True, help="后台运行")
+def master(daemon):
+    """启动 Master"""
+    config = load_config()
+    host = config["master"]["host"]
+    port = config["master"]["port"]
+    web_port = config["master"]["web_port"]
+
+    click.echo(f"🚀 PoolGPU Master 启动中...")
+    click.echo(f"  - API: http://{host}:{port}")
+    click.echo(f"  - Web UI: http://{host}:{web_port}")
+
+    cmd = ["poolgpu-master"]
+
+    if daemon:
+        pid_file = PID_DIR / "master.pid"
+        proc = subprocess.Popen(
+            cmd,
+            stdout=open(PID_DIR / "master.log", "w"),
+            stderr=subprocess.STDOUT,
+            start_new_session=True
+        )
+        pid_file.write_text(str(proc.pid))
+        click.echo(f"  - PID: {proc.pid}")
+        click.echo(f"  - 日志: {PID_DIR / 'master.log'}")
+    else:
+        os.execvp(cmd[0], cmd)
+
+
+@start.command()
+@click.argument("name")
+@click.option("--daemon", is_flag=True, help="后台运行")
+def worker(name, daemon):
+    """启动 Worker"""
+    config = load_config()
+
+    server = None
+    for s in config.get("servers", []):
+        if s["name"] == name:
+            server = s
+            break
+
+    if not server:
+        click.echo(f"错误: 未找到 Worker '{name}'")
+        return
+
+    click.echo(f"🚀 PoolGPU Worker [{name}] 启动中...")
+    click.echo(f"  - API: http://{server['host']}:{config['worker']['port']}")
+    click.echo(f"  - GPU: {server.get('gpu_model', 'unknown')} × {server.get('gpus', 0)}")
+
+    cmd = ["poolgpu-worker", name]
+
+    if daemon:
+        pid_file = PID_DIR / f"worker-{name}.pid"
+        proc = subprocess.Popen(
+            cmd,
+            stdout=open(PID_DIR / f"worker-{name}.log", "w"),
+            stderr=subprocess.STDOUT,
+            start_new_session=True
+        )
+        pid_file.write_text(str(proc.pid))
+        click.echo(f"  - PID: {proc.pid}")
+        click.echo(f"  - 日志: {PID_DIR / f'worker-{name}.log'}")
+    else:
+        os.execvp(cmd[0], cmd)
+
+
+@cli.command()
+@click.argument("role", type=click.Choice(["master", "worker"]))
+@click.argument("name", required=False)
+def stop(role, name):
+    """停止服务"""
+    if role == "master":
+        pid_file = PID_DIR / "master.pid"
+    else:
+        if not name:
+            click.echo("错误: 请指定 Worker 名称")
+            return
+        pid_file = PID_DIR / f"worker-{name}.pid"
+
+    if not pid_file.exists():
+        click.echo(f"错误: 未找到 {role} 进程")
+        return
+
+    pid = int(pid_file.read_text().strip())
+
+    try:
+        os.kill(pid, signal.SIGTERM)
+        click.echo(f"✅ 已停止 {role} 进程 (PID: {pid})")
+        pid_file.unlink()
+    except ProcessLookupError:
+        click.echo(f"警告: 进程 {pid} 不存在")
+        pid_file.unlink()
+    except Exception as e:
+        click.echo(f"错误: {e}")
 
 
 if __name__ == "__main__":
