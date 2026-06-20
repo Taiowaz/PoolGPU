@@ -9,15 +9,20 @@ WORKER_API_HEALTH = "/api/health"
 WORKER_API_GPU = "/api/gpu"
 
 
-def get_local_subnet() -> str:
-    """Get local machine's subnet in CIDR notation."""
+def get_local_ip() -> str:
+    """Get local machine's IP address."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(("8.8.8.8", 80))
         local_ip = s.getsockname()[0]
     finally:
         s.close()
+    return local_ip
 
+
+def get_local_subnet() -> str:
+    """Get local machine's subnet in CIDR notation."""
+    local_ip = get_local_ip()
     network = ipaddress.ip_network(f"{local_ip}/24", strict=False)
     return str(network)
 

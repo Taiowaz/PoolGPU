@@ -1,5 +1,6 @@
 """PoolGPU Shared - 共享工具和配置"""
 
+import copy
 import yaml
 from pathlib import Path
 from typing import Dict, Optional
@@ -36,7 +37,7 @@ def _deep_merge(base: dict, override: dict) -> dict:
     return result
 
 def load_config(merge_project: bool = True) -> Dict:
-    config = DEFAULT_CONFIG.copy()
+    config = copy.deepcopy(DEFAULT_CONFIG)
 
     if USER_CONFIG_FILE.exists():
         with open(USER_CONFIG_FILE) as f:

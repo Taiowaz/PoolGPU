@@ -4,14 +4,13 @@ import copy
 import os
 import signal
 import subprocess
-import ipaddress
 from pathlib import Path
 
 import click
 import json
 from scheduler.scheduler import Scheduler
 from shared.config import load_config, get_config_path, USER_CONFIG_DIR, DEFAULT_CONFIG
-from shared.discovery import discover_workers, get_local_subnet
+from shared.discovery import discover_workers, get_local_ip, get_local_subnet
 
 scheduler = Scheduler()
 
@@ -160,8 +159,7 @@ def init():
 
     click.echo("🔍 检测本机信息...")
 
-    subnet = get_local_subnet()
-    local_ip = str(list(ipaddress.ip_network(subnet).hosts())[0]) if subnet else "127.0.0.1"
+    local_ip = get_local_ip()
     click.echo(f"  - IP: {local_ip}")
 
     try:
@@ -234,9 +232,8 @@ def init():
 
 
 @cli.command()
-@click.option("--update", is_flag=True, help="更新现有配置")
 @click.option("--subnet", help="指定扫描网段 (如 192.168.1.0/24)")
-def discover(update, subnet):
+def discover(subnet):
     """自动发现 Worker"""
     if subnet is None:
         subnet = get_local_subnet()

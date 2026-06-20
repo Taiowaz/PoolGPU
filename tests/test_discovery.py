@@ -26,8 +26,10 @@ def test_check_worker_health_failure():
 
 
 def test_discover_workers():
-    with patch('shared.discovery.check_worker_health') as mock_check:
-        mock_check.side_effect = lambda h, p, t: {"host": h, "gpus": 2} if h.endswith("100") else None
+    with patch('shared.discovery.check_worker_health') as mock_health, \
+         patch('shared.discovery.check_worker_gpu') as mock_gpu:
+        mock_health.side_effect = lambda h, p, t: {"host": h, "gpus": 2} if h.endswith("100") else None
+        mock_gpu.return_value = [{"gpu_model": "RTX 4090", "gpus": 2}]
 
         workers = discover_workers("192.168.1.0/24", timeout=0.1)
         assert len(workers) == 1
