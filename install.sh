@@ -77,6 +77,19 @@ create_wrapper() {
 exec "$HOME/.local/share/poolgpu/venv/bin/poolgpu" "$@"
 EOF
     chmod +x "$BIN_DIR/poolgpu"
+    
+    cat > "$BIN_DIR/poolgpu-master" << 'EOF'
+#!/bin/bash
+exec "$HOME/.local/share/poolgpu/venv/bin/poolgpu-master" "$@"
+EOF
+    chmod +x "$BIN_DIR/poolgpu-master"
+    
+    cat > "$BIN_DIR/poolgpu-worker" << 'EOF'
+#!/bin/bash
+exec "$HOME/.local/share/poolgpu/venv/bin/poolgpu-worker" "$@"
+EOF
+    chmod +x "$BIN_DIR/poolgpu-worker"
+    
     info "命令入口创建完成"
 }
 
