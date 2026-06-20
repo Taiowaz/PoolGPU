@@ -10,7 +10,7 @@ import click
 import json
 from scheduler.scheduler import Scheduler
 from shared.config import load_config, get_config_path, USER_CONFIG_DIR, DEFAULT_CONFIG
-from shared.discovery import discover_workers, get_local_ip, get_local_subnet
+from shared.discovery import get_local_ip
 
 scheduler = Scheduler()
 
@@ -214,67 +214,6 @@ def init():
 
     click.echo("")
     click.echo(f"✅ 配置已保存到 {config_file}")
-
-
-@cli.command()
-@click.option("--subnet", help="指定扫描网段 (如 192.168.1.0/24)")
-def discover(subnet):
-    """自动发现 Worker"""
-    if subnet is None:
-        subnet = get_local_subnet()
-
-    click.echo(f"🔍 扫描 {subnet}...")
-
-    workers = discover_workers(subnet)
-
-    if not workers:
-        click.echo("未发现 Worker")
-        return
-
-    click.echo(f"发现 {len(workers)} 台 Worker:")
-    for w in workers:
-        gpu_info = w.get("gpu", [{}])
-        if gpu_info and isinstance(gpu_info, list) and len(gpu_info) > 0:
-            model = gpu_info[0].get("name", "unknown")
-            count = len(gpu_info)
-        else:
-            model = "unknown"
-            count = 0
-        click.echo(f"  - {w['host']} ({model} × {count})")
-
-    if click.confirm("将发现的 Worker 添加到配置"):
-        config = load_config(merge_project=False)
-
-        existing_hosts = {s["host"] for s in config.get("servers", [])}
-        new_workers = [w for w in workers if w["host"] not in existing_hosts]
-
-        for w in new_workers:
-            gpu_info = w.get("gpu", [{}])
-            if gpu_info and isinstance(gpu_info, list) and len(gpu_info) > 0:
-                model = gpu_info[0].get("name", "unknown")
-                count = len(gpu_info)
-            else:
-                model = "unknown"
-                count = 0
-            name = click.prompt(
-                f"  - {w['host']} 的名称",
-                default=f"server{len(config.get('servers', []))+1}"
-            )
-
-            config.setdefault("servers", []).append({
-                "name": name,
-                "host": w["host"],
-                "user": click.prompt(f"  - {name} 的用户名", default=os.getenv("USER")),
-                "gpus": count,
-                "gpu_model": model
-            })
-
-        import yaml
-        config_file = get_config_path("user")
-        with open(config_file, "w") as f:
-            yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
-
-        click.echo(f"✅ 已添加 {len(new_workers)} 台 Worker 到配置")
 
 
 @cli.group()
