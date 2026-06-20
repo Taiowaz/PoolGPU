@@ -330,15 +330,23 @@ def worker(name, daemon):
     """启动 Worker"""
     config = load_config()
 
+    # 先从 servers 列表查找
     server = None
     for s in config.get("servers", []):
         if s["name"] == name:
             server = s
             break
-
+    
+    # 如果没找到，可能是本机 Worker，使用默认配置
     if not server:
-        click.echo(f"错误: 未找到 Worker '{name}'")
-        return
+        from shared.discovery import get_local_ip
+        server = {
+            "name": name,
+            "host": get_local_ip(),
+            "user": os.getenv("USER"),
+            "gpus": 0,
+            "gpu_model": "unknown"
+        }
 
     click.echo(f"🚀 PoolGPU Worker [{name}] 启动中...")
     click.echo(f"  - API: http://{server['host']}:{config['worker']['port']}")
