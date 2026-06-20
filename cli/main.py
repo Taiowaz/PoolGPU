@@ -160,6 +160,7 @@ def init():
     click.echo("🔍 检测本机信息...")
 
     local_ip = get_local_ip()
+    subnet = get_local_subnet()
     click.echo(f"  - IP: {local_ip}")
 
     try:
