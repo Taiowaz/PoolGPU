@@ -2,9 +2,8 @@
 # 直接修改此文件配置集群
 
 master:
-  host: 10.61.16.33    # Master IP
-  port: 8080           # API 端口
-  web_port: 5000       # Web UI 端口
+  host: 10.61.16.33
+  port: 8080
 
 # Worker 列表
 servers:

@@ -46,7 +46,6 @@ if [ ! -f "$CONFIG_FILE" ]; then
 master:
   host: 127.0.0.1    # Master IP
   port: 8080
-  web_port: 5000
 
 servers:
   - name: server1
