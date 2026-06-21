@@ -41,16 +41,16 @@ info "PoolGPU 安装完成"
 if [ ! -f "$CONFIG_FILE" ]; then
     cat > "$CONFIG_FILE" << 'EOF'
 # PoolGPU 配置文件
-# 直接修改此文件配置集群
+# 修改下面的 IP 地址和用户名即可
 
 master:
-  host: 127.0.0.1    # Master IP
+  host: 请填写Master的IP
   port: 8080
 
 servers:
   - name: server1
-    host: 192.168.1.100
-    user: root
+    host: 请填写Worker的IP
+    user: 请填写登录用户名
     gpus: 2
     gpu_model: "5090"
 
@@ -61,19 +61,10 @@ worker:
 results:
   dir: /tmp/poolgpu/results
 
-sync:
-  code_dir: ~/PoolGPU
-  env_name: myenv
-  env_pack_path: /tmp/myenv.tar.gz
-
 gpu_models:
   "3090Ti": 1
   "4090D": 2
   "5090": 3
-
-retry:
-  delay_seconds: 5
-  max_attempts: 3
 EOF
     info "默认配置已创建: $CONFIG_FILE"
 else
