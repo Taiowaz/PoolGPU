@@ -44,13 +44,13 @@ if [ ! -f "$CONFIG_FILE" ]; then
 # 修改下面的 IP 地址和用户名即可
 
 master:
-  host: 请填写Master的IP
+  host: 10.61.16.33
   port: 8080
 
 servers:
   - name: server1
-    host: 请填写Worker的IP
-    user: 请填写登录用户名
+    host: 10.62.193.36
+    user: handb
     gpus: 2
     gpu_model: "5090"
 
