@@ -197,7 +197,7 @@ def worker(name, daemon):
 
     # 先从 servers 列表查找
     server = None
-    for s in config.get("servers", []):
+    for s in config.get("workers", []):
         if s["name"] == name:
             server = s
             break

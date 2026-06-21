@@ -47,7 +47,7 @@ master:
   host: 10.61.16.33
   port: 8080
 
-servers:
+workers:
   - name: server1
     host: 10.62.193.36
     user: handb

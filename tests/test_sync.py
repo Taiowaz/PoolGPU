@@ -29,7 +29,7 @@ def scheduler():
 @patch("scheduler.scheduler.load_config")
 def test_sync_all_workers_no_servers(mock_load_config, scheduler):
     """测试无服务器时的同步"""
-    mock_load_config.return_value = {"master": {"host": "127.0.0.1"}, "servers": []}
+    mock_load_config.return_value = {"master": {"host": "127.0.0.1"}, "workers": []}
     results = scheduler.sync_all_workers()
     assert results == []
 
@@ -40,7 +40,7 @@ def test_sync_all_workers_success(mock_load_config, mock_post, scheduler):
     """测试同步成功"""
     mock_load_config.return_value = {
         "master": {"host": "127.0.0.1"},
-        "servers": [{"name": "test_server", "host": "127.0.0.1", "user": "test"}]
+        "workers": [{"name": "test_server", "host": "127.0.0.1", "user": "test"}]
     }
 
     mock_response = MagicMock()
@@ -64,7 +64,7 @@ def test_sync_all_workers_failure(mock_load_config, mock_post, scheduler):
     """测试同步失败"""
     mock_load_config.return_value = {
         "master": {"host": "127.0.0.1"},
-        "servers": [{"name": "test_server", "host": "127.0.0.1", "user": "test"}]
+        "workers": [{"name": "test_server", "host": "127.0.0.1", "user": "test"}]
     }
 
     mock_response = MagicMock()

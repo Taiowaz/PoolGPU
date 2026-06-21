@@ -105,7 +105,7 @@ class Scheduler:
         worker_port = get_worker_port()
         all_gpus = []
 
-        for server in config.get("servers", []):
+        for server in config.get("workers", []):
             try:
                 resp = requests.get(
                     f"http://{server['host']}:{worker_port}/api/gpu",
@@ -255,7 +255,7 @@ class Scheduler:
         source = f"{master_host}:{code_dir}"
 
         results = []
-        for server in config.get("servers", []):
+        for server in config.get("workers", []):
             start_time = time.time()
             try:
                 resp = requests.post(
@@ -332,7 +332,7 @@ class Scheduler:
         # 第二步：调用所有 Worker 同步
         source = f"{master_host}:{pack_path}"
         results = []
-        for server in config.get("servers", []):
+        for server in config.get("workers", []):
             start_time = time.time()
             try:
                 resp = requests.post(
@@ -380,7 +380,7 @@ class Scheduler:
 
         # 找到服务器配置
         server_config = None
-        for server in config.get("servers", []):
+        for server in config.get("workers", []):
             if server["name"] == server_name:
                 server_config = server
                 break

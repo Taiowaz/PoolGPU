@@ -16,7 +16,7 @@ def load_config() -> Dict:
 def get_server_config(server_name: str) -> Optional[Dict]:
     """获取服务器配置"""
     config = load_config()
-    for server in config.get("servers", []):
+    for server in config.get("workers", []):
         if server["name"] == server_name:
             return server
     return None
@@ -24,7 +24,7 @@ def get_server_config(server_name: str) -> Optional[Dict]:
 def get_all_servers() -> list:
     """获取所有服务器配置"""
     config = load_config()
-    return config.get("servers", [])
+    return config.get("workers", [])
 
 
 def get_worker_port() -> int:

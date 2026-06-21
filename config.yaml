@@ -6,7 +6,7 @@ master:
   port: 8080
 
 # Worker 列表
-servers:
+workers:
   - name: server1
     host: 10.62.193.36
     user: poolgpu-test

@@ -31,7 +31,7 @@ def test_env_sync_all_workers_no_servers(scheduler):
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         mock_config.return_value = {
             "master": {"host": "127.0.0.1"},
-            "servers": [],
+            "workers": [],
             "sync": {"env_name": "myenv", "env_pack_path": "/tmp/myenv.tar.gz"},
             "worker": {"port": 8090},
         }
@@ -60,7 +60,7 @@ def test_env_sync_all_workers_success(mock_config, mock_post, mock_run, schedule
     # Mock config with test server
     mock_config.return_value = {
         "master": {"host": "127.0.0.1"},
-        "servers": [{"name": "test_server", "host": "127.0.0.1", "user": "test"}],
+        "workers": [{"name": "test_server", "host": "127.0.0.1", "user": "test"}],
         "sync": {"env_name": "myenv", "env_pack_path": "/tmp/myenv.tar.gz"},
         "worker": {"port": 8090},
     }
@@ -83,7 +83,7 @@ def test_env_sync_pack_failure(mock_config, mock_run, scheduler):
     )
     mock_config.return_value = {
         "master": {"host": "127.0.0.1"},
-        "servers": [],
+        "workers": [],
         "sync": {"env_name": "myenv", "env_pack_path": "/tmp/myenv.tar.gz"},
         "worker": {"port": 8090},
     }

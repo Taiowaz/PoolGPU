@@ -16,7 +16,7 @@ def test_full_config_lifecycle():
 
         user_config = {
             "master": {"host": "10.0.0.1", "port": 9999},
-            "servers": [
+            "workers": [
                 {"name": "server1", "host": "10.0.0.2", "user": "test", "gpus": 2, "gpu_model": "4090"}
             ],
         }
