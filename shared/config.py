@@ -4,11 +4,13 @@ import yaml
 from pathlib import Path
 from typing import Dict, Optional
 
-CONFIG_PATH = Path(__file__).parent.parent / "config.yaml"
+USER_CONFIG = Path.home() / ".config/poolgpu/config.yaml"
+PROJECT_CONFIG = Path(__file__).parent.parent / "config.yaml"
 
 def load_config() -> Dict:
-    """加载配置"""
-    with open(CONFIG_PATH) as f:
+    """加载配置，优先使用用户配置"""
+    config_file = USER_CONFIG if USER_CONFIG.exists() else PROJECT_CONFIG
+    with open(config_file) as f:
         return yaml.safe_load(f)
 
 def get_server_config(server_name: str) -> Optional[Dict]:
