@@ -24,16 +24,7 @@ if ! command -v python3 &> /dev/null; then
 fi
 info "Python $(python3 --version | cut -d' ' -f2)"
 
-# 2. 克隆仓库（如果没有）
-if [ ! -d ~/PoolGPU/.git ]; then
-    git clone -b dev https://github.com/Taiowaz/PoolGPU.git ~/PoolGPU
-    info "代码已克隆到 ~/PoolGPU"
-else
-    cd ~/PoolGPU && git pull
-    info "代码已更新"
-fi
-
-# 3. 创建 venv 并安装
+# 2. 创建 venv 并安装
 mkdir -p "$INSTALL_DIR" "$BIN_DIR"
 
 if [ ! -d "$VENV_DIR" ]; then
@@ -41,10 +32,10 @@ if [ ! -d "$VENV_DIR" ]; then
 fi
 
 "$VENV_DIR/bin/pip" install --upgrade pip -q 2>/dev/null
-"$VENV_DIR/bin/pip" install -e ~/PoolGPU -q
-info "依赖安装完成"
+"$VENV_DIR/bin/pip" install git+https://github.com/Taiowaz/PoolGPU.git@dev -q
+info "PoolGPU 安装完成"
 
-# 4. 创建命令入口
+# 3. 创建命令入口
 cat > "$BIN_DIR/poolgpu" << 'EOF'
 #!/bin/bash
 exec "$HOME/.local/share/poolgpu/venv/bin/poolgpu" "$@"
@@ -59,7 +50,7 @@ chmod +x "$BIN_DIR/poolgpu-worker"
 
 info "命令已安装"
 
-# 5. 配置 PATH
+# 4. 配置 PATH
 if ! grep -q '\.local/bin' ~/.bashrc 2>/dev/null; then
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
     info "PATH 已配置"
@@ -67,7 +58,3 @@ fi
 
 echo ""
 info "安装完成！"
-echo ""
-echo "下一步："
-echo "  1. 编辑配置: vim ~/PoolGPU/config.yaml"
-echo "  2. 启动服务: poolgpu start master --daemon"
